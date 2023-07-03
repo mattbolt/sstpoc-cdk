@@ -8,7 +8,11 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk --profile=sstpoc",
+    "cdk:deploy": "cdk deploy --all --profile=sstpoc",
+    "cdk:destroy": "cdk destroy --all --profile=sstpoc",
+    "cdk:diff": "cdk diff --profile=sstpoc",
+    "cdk:synth": "cdk synth --profile=sstpoc"
   },
   "devDependencies": {
     "@types/jest": "^29.4.0",
