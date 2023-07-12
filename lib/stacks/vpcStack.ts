@@ -8,6 +8,7 @@ import {
 export class VpcStack extends Stack {
     public readonly vpc: Vpc;
     public readonly bastionSecurityGroup: SecurityGroup;
+    public readonly lambdaSecurityGroup: SecurityGroup;
     public readonly rdsSecurityGroup: SecurityGroup;
     public readonly privateSubnets: PrivateSubnet[];
     public readonly publicSubnets: PublicSubnet[];
@@ -42,6 +43,13 @@ export class VpcStack extends Stack {
             vpc: this.vpc,
         });
 
+        // Create a security group for Lambda functions
+        this.lambdaSecurityGroup = new SecurityGroup(this, 'LambdaSecurityGroup', {
+            allowAllOutbound: false, // Set as false to disable allowing all outbound traffic
+            securityGroupName: `SstPocCdk-LambdaSecurityGroup`,
+            vpc: this.vpc,
+        });
+
         // Create a security group for the RDS instance
         this.rdsSecurityGroup = new SecurityGroup(this, 'RdsSecurityGroup', {
             allowAllOutbound: false, // Set as false to disable allowing all outbound traffic
@@ -54,8 +62,11 @@ export class VpcStack extends Stack {
         this.bastionSecurityGroup.addIngressRule(Peer.anyIpv4(), Port.tcp(22), 'Allow SSH access from the internet');
         this.bastionSecurityGroup.addEgressRule(Peer.anyIpv4(), Port.tcp(443), 'Allow outbound traffic on HTTPS ports for SSM connections');
         this.bastionSecurityGroup.addEgressRule(Peer.anyIpv4(), Port.tcpRange(1024, 65535), 'Allow outbound traffic on ephemeral ports for SSH connections');
-        // Allow inbound traffic from the bastion host on the SQL port
+        // Allow outbound traffic from lambda functions on ephemeral ports
+        this.lambdaSecurityGroup.addEgressRule(Peer.anyIpv4(), Port.tcpRange(1024, 65535), 'Allow outbound traffic on ephemeral ports for lambda functions');
+        // Allow inbound traffic from the bastion host and lambda functions on the SQL port
         this.rdsSecurityGroup.addIngressRule(Peer.securityGroupId(this.bastionSecurityGroup.securityGroupId), Port.tcp(5432), 'Allow input traffic from bastion host on SQL port');
+        this.rdsSecurityGroup.addIngressRule(Peer.securityGroupId(this.lambdaSecurityGroup.securityGroupId), Port.tcp(5432), 'Allow input traffic from lambda functions on SQL port');
         this.rdsSecurityGroup.addEgressRule(Peer.anyIpv4(), Port.tcpRange(1024, 65535), 'Allow outbound traffic on ephemeral ports');
 
 
